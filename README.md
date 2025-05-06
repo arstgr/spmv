@@ -12,9 +12,9 @@ gcc -O3 -ftree-vectorize -funroll-loops -fprefetch-loop-arrays -falign-functions
 
 ## To run
 ```
-OMP_NUM_THREADS=$(nproc) OMP_PROC_BIND=close ./a.out HV15R/HV15R.mtx
+OMP_NUM_THREADS=$(nproc) OMP_PROC_BIND=close <executable> HV15R/HV15R.mtx
 ```
-nproc could be set to 24, or a multiple of 8
+nproc could be set to 24, or a multiple of 8. A script, `run_test.sh' is also available to run under linux perf for profiling.
 
 ## Input datasets
 The input datasets can be downloaded from 
