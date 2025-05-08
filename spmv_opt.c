@@ -35,7 +35,7 @@ CSRMatrix* read_matrix_market(const char* filename) {
     CSRMatrix* mat = (CSRMatrix*)malloc(sizeof(CSRMatrix));
     sscanf(line, "%d %d %d", &mat->n_rows, &mat->n_cols, &mat->n_nonzeros);
     
-    size_t alignment = 32;
+    size_t alignment = 64;
     size_t nnz_size = mat->n_nonzeros * sizeof(double);
     if (nnz_size % alignment != 0) {
         nnz_size += alignment - (nnz_size % alignment);
