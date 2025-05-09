@@ -11,7 +11,7 @@ gcc -O3 -ftree-vectorize -funroll-loops -fprefetch-loop-arrays -falign-functions
 ```
 
 ## Compile with calls to AMD AOCL Sparse library
-Note: currently only works with AOCL v4.2. AUCL v5.0+ seem to have a bug.
+Note: currently only works with AOCL v4.2. AOCL v5.0+ seem to have a bug.
 
 ```
 gcc -O3 -ftree-vectorize -funroll-loops -fprefetch-loop-arrays -falign-functions=64 -falign-loops=64 -funroll-all-loops -fopenmp -march=znver4 -g spmv-aocl.c -I/<path to AOCL v4.2.0>/include -L/<path to AOCL v4.2.0>/lib -laoclsparse -lm
