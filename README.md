@@ -25,6 +25,35 @@ OMP_NUM_THREADS=$(nproc) OMP_PROC_BIND=close <executable> HV15R/HV15R.mtx
 ```
 nproc could be set to 24, or a multiple of 8. A script, `run_test.sh' is also available to run under linux perf for profiling.
 
+## To run MKL optimized code
+Export environment variables and source library
+```
+export OMP_NUM_THREADS=24     
+export MKL_NUM_THREADS=24
+export KMP_AFFINITY=granularity=fine,compact  
+export MKL_ENABLE_INSTRUCTIONS=AVX512 
+export OMP_PROC_BIND=close 
+source /opt/intel/oneapi/setvars.sh # assuming you have MKL installed
+```
+
+Compile code
+
+```
+gcc -O3 -fopenmp spmv_mkl.c -o spmv_mkl_exec \
+  -I${MKLROOT}/include \
+  -L${MKLROOT}/lib/intel64 \
+  -Wl,--start-group \
+  -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread \
+  -liomp5 -lpthread -lm -ldl \
+  -Wl,--end-group
+```
+
+Execute
+
+```
+numactl --cpunodebind=0 --membind=0 ./spmv_mkl_exec PR02R/PR02R.mtx
+```
+
 ## Input datasets
 The input datasets can be downloaded from 
 ```
