@@ -82,9 +82,8 @@ void spmv_base(const CSRMatrix* A, const double* x, double* y) {
 }
 // MKL
 void spmv_mkl(sparse_matrix_t A_handle, const struct matrix_descr* descr, const double* x, double* y) {
-    // struct matrix_descr descr = {.type = SPARSE_MATRIX_TYPE_GENERAL}; //move this to the main,send to function
     mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,
-                    1.0, A_handle, descr,
+                    1.0, A_handle, *descr,
                     x, 0.0, y);
 }
 
@@ -117,25 +116,11 @@ int main(int argc, char* argv[]) {
         printf("Usage: %s <matrix_market_file>\n", argv[0]);
         return 1;
     }
-
-    // mkl_set_num_threads(24); // dont set it right here, make it env variable
+    // Confirm number of threads
     printf("MKL max threads: %d\n", mkl_get_max_threads());
 
     CSRMatrix* A = read_matrix_market(argv[1]);
     if (!A) return 1;
-
-
-    // change to 1-based indexing for MKL
-    // MKL uses 1-based indexing, so we need to adjust the row_ptr and col_indices
-    //64 aligned
-    // free memory for these two
-    // int* row_ptr_1b = (int*)malloc((A->n_rows + 1) * sizeof(int));
-    // int* col_idx_1b = (int*)malloc(A->n_nonzeros * sizeof(int));
-    // for (int i = 0; i <= A->n_rows; ++i)
-    //     row_ptr_1b[i] = A->row_ptr[i] + 1;
-    // for (int i = 0; i < A->n_nonzeros; ++i)
-    //     col_idx_1b[i] = A->col_indices[i] + 1;
-
 
     //64 aligned
     int* row_ptr_1b = (int*)mkl_malloc((A->n_rows + 1) * sizeof(int), 64);
@@ -199,10 +184,8 @@ int main(int argc, char* argv[]) {
     mkl_free(x);
     mkl_free(y);
     mkl_free(y_base);
-    // free memory for these two
     mkl_free(row_ptr_1b);
     mkl_free(col_idx_1b);
-    // free mkl handle
     mkl_sparse_destroy(A_handle);
 
     return 0;
