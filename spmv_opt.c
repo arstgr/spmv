@@ -81,126 +81,6 @@ CSRMatrix* read_matrix_market(const char* filename) {
     return mat;
 }
 
-// Sparse matrix-vector multiplication
-/*void spmv(const CSRMatrix* A, const double* x, double* y) {
-    #pragma omp parallel for
-    for (int i = 0; i < A->n_rows; i++) {
-        double sum = 0.0;
-        for (int j = A->row_ptr[i]; j < A->row_ptr[i + 1]; j++) {
-            sum += A->values[j] * x[A->col_indices[j]];
-        }
-        y[i] = sum;
-    }
-}*/
-/*void spmv(const CSRMatrix* A, const double* x, double* y) {
-    #pragma omp parallel for
-    for (int i = 0; i < A->n_rows; i++) {
-	    double sum = 0.0;
-	    for (int j = A->row_ptr[i]; j < A->row_ptr[i + 1]; j += 4) {
-    		double sum_part = 0.0;
-    		sum_part += A->values[j] * x[A->col_indices[j]];
-    		if (j + 1 < A->row_ptr[i + 1])
-    		    sum_part += A->values[j + 1] * x[A->col_indices[j + 1]];
-    		if (j + 2 < A->row_ptr[i + 1])
-    		    sum_part += A->values[j + 2] * x[A->col_indices[j + 2]];
-    		if (j + 3 < A->row_ptr[i + 1])
-    		    sum_part += A->values[j + 3] * x[A->col_indices[j + 3]];
-    		sum += sum_part;
-		}
-	    y[i] = sum;
-    }
-}*/
-/*void spmv(const CSRMatrix* A, const double* x, double* y) {
-    #pragma omp parallel for
-    for (int i = 0; i < A->n_rows; i++) {
-        double sum = 0.0;
-        for (int j = A->row_ptr[i]; j < A->row_ptr[i + 1]; j++) {
-	    if (j%8==0){
-	    	__builtin_prefetch(&A->values[j+4] , 0, 1);
-	    	__builtin_prefetch(&x[A->col_indices[j+1]] , 0, 1);
-		__builtin_prefetch(&x[A->col_indices[j+2]] , 0, 1);
-		__builtin_prefetch(&x[A->col_indices[j+3]] , 0, 1);
-		__builtin_prefetch(&x[A->col_indices[j+4]] , 0, 1);
-	        __builtin_prefetch(&A->col_indices[j+8] , 0, 1);
-	    }
-            sum += A->values[j] * x[A->col_indices[j]];
-        }
-        y[i] = sum;
-    }
-}
-*/
-/*void spmv(const CSRMatrix* A, const double* x, double* y) {
-    #pragma omp parallel for
-    for (int i = 0; i < A->n_rows; i++) {
-        __m256d vec_sum = _mm256_setzero_pd(); // Vectorized sum (4 doubles)
-
-        int j = A->row_ptr[i];
-        int end = A->row_ptr[i + 1];
-        
-        // Process in chunks of 4
-        for (; j <= end - 4; j += 4) {
-            __m256d vec_values = _mm256_load_pd(&A->values[j]); // Load 4 values
-            __m256d vec_x = _mm256_set_pd(
-                x[A->col_indices[j+3]],
-                x[A->col_indices[j+2]],
-                x[A->col_indices[j+1]],
-                x[A->col_indices[j]]
-            ); // Load x values
-            vec_sum = _mm256_fmadd_pd(vec_values, vec_x, vec_sum); // Multiply and accumulate
-        }
-
-        // Handle the remaining elements
-        double sum = 0.0;
-        for (; j < end; j++) {
-            sum += A->values[j] * x[A->col_indices[j]];
-        }
-
-        // Store back the horizontal sum of vec_sum and add the remainder
-        double sum_array[4];
-        _mm256_storeu_pd(sum_array, vec_sum); // Store back to memory
-        y[i] = sum_array[0] + sum_array[1] + sum_array[2] + sum_array[3] + sum;
-    }
-}*/
-/*
-void spmv(const CSRMatrix* A, const double* x, double* y) {
-    #pragma omp parallel for
-    for (int i = 0; i < A->n_rows; i++) {
-        __m256d vec_sum = _mm256_setzero_pd(); // Vectorized sum (4 doubles)
-
-        int j = A->row_ptr[i];
-        int end = A->row_ptr[i + 1];
-        
-        // Process in chunks of 4
-        for (; j <= end - (end%4); j += 4) {
-	    // Prefetch future values and indices
-            __builtin_prefetch(&A->values[j + 8], 0, 1);
-            __builtin_prefetch(&A->col_indices[j + 16], 0, 2);
-
-	    __builtin_prefetch(&x[A->col_indices[j + 8]], 0, 1);
-            
-            __m256d vec_values = _mm256_load_pd(&A->values[j]); // Load 4 values
-            __m256d vec_x = _mm256_set_pd(
-                x[A->col_indices[j+3]],
-                x[A->col_indices[j+2]],
-                x[A->col_indices[j+1]],
-                x[A->col_indices[j]]
-            ); // Load x values
-            vec_sum = _mm256_fmadd_pd(vec_values, vec_x, vec_sum); // Multiply and accumulate
-        }
-
-        // Handle the remaining elements
-        double sum = 0.0;
-        for (; j < end; j++) {
-            sum += A->values[j] * x[A->col_indices[j]];
-        }
-
-        // Store back the horizontal sum of vec_sum and add the remainder
-        double sum_array[4];
-        _mm256_storeu_pd(sum_array, vec_sum); // Store back to memory
-        y[i] = sum_array[0] + sum_array[1] + sum_array[2] + sum_array[3] + sum;
-    }
-}
-*/
 void spmv(const CSRMatrix* A, const double* x, double* y) {
     #pragma omp parallel for
     for (int i = 0; i < A->n_rows; i++) {
@@ -210,11 +90,14 @@ void spmv(const CSRMatrix* A, const double* x, double* y) {
         int end = A->row_ptr[i + 1];
 
         // Process in chunks of 8
+	const size_t prefetch_dist = 256;
         for (; j <= end - (end % 8); j += 8) {
             // Prefetch future values and indices
-            __builtin_prefetch(&A->values[j + 4], 0, 1);
-            __builtin_prefetch(&A->col_indices[j + 8], 0, 2);
-	    __builtin_prefetch(&x[A->col_indices[j + 4]], 0, 1);
+	    for (int k=0; k<8; k++){
+                _mm_prefetch((const char*)&A->values[j + prefetch_dist + k], _MM_HINT_T0);
+                _mm_prefetch((const char*)&x[A->col_indices[j + prefetch_dist + k]], _MM_HINT_T0);
+                _mm_prefetch((const char*)&A->col_indices[j + 2*prefetch_dist + k], _MM_HINT_T0);
+            }
             // Load 8 values from the matrix
             __m512d vec_values = _mm512_load_pd(&A->values[j]);
 
