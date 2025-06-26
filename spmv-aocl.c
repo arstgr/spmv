@@ -30,6 +30,8 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include <omp.h>
+
 // Structure for CSR format
 typedef struct {
     double *values;    // non-zero values
