@@ -36,24 +36,11 @@ CSRMatrix* read_matrix_market(const char* filename) {
     sscanf(line, "%d %d %d", &mat->n_rows, &mat->n_cols, &mat->n_nonzeros);
     
     size_t alignment = 64;
-    size_t nnz_size = mat->n_nonzeros * sizeof(double);
-    if (nnz_size % alignment != 0) {
-        nnz_size += alignment - (nnz_size % alignment);
-    }
-    size_t nnz_isize = mat->n_nonzeros * sizeof(int);
-    if (nnz_isize % alignment != 0) {
-	    nnz_isize += alignment - (nnz_isize % alignment);
-    }
-    size_t nr_size = (mat->n_rows + 1) * sizeof(int);
-    if (nr_size % alignment != 0) {
-	nr_size += alignment - (nr_size % alignment);
-    }
-
     // Allocate memory
-    mat->values = (double*)aligned_alloc(alignment, nnz_size); //(double*)malloc(mat->n_nonzeros * sizeof(double));
-    mat->col_indices = (int*)aligned_alloc(alignment, nnz_isize);//(int*)malloc(mat->n_nonzeros * sizeof(int));
-    mat->row_ptr = (int*)aligned_alloc(alignment, nr_size) ;//(int*)calloc(mat->n_rows + 1, sizeof(int));
-
+    posix_memalign((void**)&mat->values, alignment, mat->n_nonzeros * sizeof(double));
+    posix_memalign((void**)&mat->col_indices, alignment, mat->n_nonzeros * sizeof(int));
+    posix_memalign((void**)&mat->row_ptr, alignment, (mat->n_rows + 1) * sizeof(int));
+    memset(mat->row_ptr, 0, (mat->n_rows + 1) * sizeof(int));
     // Temporary arrays for COO format
     int* row_indices = (int*)malloc(mat->n_nonzeros * sizeof(int));
     
