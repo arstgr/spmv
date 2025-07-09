@@ -1,7 +1,6 @@
 #!/bin/bash
 
 wget https://suitesparse-collection-website.herokuapp.com/MM/Fluorem/HV15R.tar.gz
-wget https://suitesparse-collection-website.herokuapp.com/MM/Fluorem/PR02R.tar.gz
 
 wget https://suitesparse-collection-website.herokuapp.com/MM/Fluorem/DK01R.tar.gz
 wget https://suitesparse-collection-website.herokuapp.com/MM/Fluorem/GT01R.tar.gz
