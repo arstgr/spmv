@@ -20,11 +20,13 @@ def compute_bandwidth_details(matrix):
     max_col_bw = np.max(col_bw)
     avg_col_bw = np.mean(col_bw)
 
+    bandwidth = np.max(np.abs(coo.row - coo.col))
     return {
         "max_row_bandwidth": max_row_bw,
         "avg_row_bandwidth": avg_row_bw,
         "max_col_bandwidth": max_col_bw,
         "avg_col_bandwidth": avg_col_bw,
+        "bandwidth" : bandwidth,
     }
 
 if __name__ == "__main__":
