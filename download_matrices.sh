@@ -27,3 +27,25 @@ wget https://suitesparse-collection-website.herokuapp.com/MM/Oberwolfach/rail_51
 
 wget https://suitesparse-collection-website.herokuapp.com/MM/Averous/epb2.tar.gz
 wget https://suitesparse-collection-website.herokuapp.com/MM/Averous/epb3.tar.gz
+
+wget https://suitesparse-collection-website.herokuapp.com/MM/Wissgott/parabolic_fem.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/CEMW/tmt_unsym.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/CEMW/tmt_sym.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Hamrle/Hamrle3.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Freescale/circuit5M.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Freescale/circuit5M_dc.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Freescale/Freescale1.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Freescale/Freescale2.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Bourchtein/atmosmodd.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Bourchtein/atmosmodj.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Bourchtein/atmosmodl.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Bourchtein/atmosmodm.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/GHS_indef/darcy003.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/GHS_indef/bmw3_2.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/GHS_indef/d_pretok.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/GHS_indef/boyd1.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/GHS_indef/boyd2.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Rothberg/cfd1.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/Rothberg/cfd2.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/bmw7st_1.tar.gz
+wget https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/bmwcra_1.tar.gz
