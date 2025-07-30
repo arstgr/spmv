@@ -6,9 +6,10 @@
 #include <omp.h>
 #include <time.h>
 #include <sys/time.h>
+#include <immintrin.h>
 
 #define ALIGNMENT 64
-#define SLICE_SIZE 32 // C (number of rows per slice)
+#define SLICE_SIZE 64 // C (number of rows per slice)
 
 void* posix_aligned_alloc(size_t size, size_t alignment) {
     void* ptr = NULL;
@@ -90,63 +91,65 @@ static int max_in_range(const int* arr, int start, int end) {
 
 SELLCSigma coo_to_sellcsigma(int M, int nz, int* I, int* J, double* val, int slice_size) {
     int num_slices = (M + slice_size - 1) / slice_size;
-    int* row_counts = (int*)calloc(M, sizeof(int));
+    int* row_counts = calloc(M, sizeof(int));
+    int** row_ptrs = malloc(M * sizeof(int*)); // Array of pointers to entry indices for each row
+    int* row_pos = calloc(M, sizeof(int));     // Position counters per row
+
+    // Count nnz per row
     for (int k = 0; k < nz; ++k) row_counts[I[k]]++;
-    int* slice_lengths = (int*)malloc(num_slices * sizeof(int));
+
+    // Build row_ptrs: for each row, allocate space for indices
+    for (int i = 0; i < M; ++i)
+        row_ptrs[i] = malloc(row_counts[i] * sizeof(int));
+
+    // Populate row_ptrs with indices into COO arrays
+    int* row_fill = calloc(M, sizeof(int));
+    for (int k = 0; k < nz; ++k) {
+        int row = I[k];
+        row_ptrs[row][row_fill[row]++] = k;
+    }
+    free(row_fill);
+
+    // Compute slice_lengths and total_nnz
+    int* slice_lengths = malloc(num_slices * sizeof(int));
     int total_nnz = 0;
     for (int s = 0; s < num_slices; ++s) {
         int slice_start = s * slice_size;
         int slice_end = (slice_start + slice_size > M) ? M : (slice_start + slice_size);
-        slice_lengths[s] = max_in_range(row_counts, slice_start, slice_end);
-        total_nnz += (slice_end - slice_start) * slice_lengths[s];
+        int maxlen = 0;
+        for (int r = slice_start; r < slice_end; ++r)
+            if (row_counts[r] > maxlen) maxlen = row_counts[r];
+        slice_lengths[s] = maxlen;
+        total_nnz += (slice_end - slice_start) * maxlen;
     }
-    double* sell_val = (double*)posix_aligned_alloc(total_nnz * sizeof(double), ALIGNMENT);
-    int* sell_idx = (int*)posix_aligned_alloc(total_nnz * sizeof(int), ALIGNMENT);
-    if (!sell_val || !sell_idx || !slice_lengths) {
-        fprintf(stderr, "SELL-C-σ aligned memory allocation failed\n");
-        exit(1);
-    }
-    size_t arr_size = total_nnz;
-    memset(sell_val, 0, arr_size * sizeof(double));
-    for (size_t i = 0; i < arr_size; ++i) sell_idx[i] = -1;
 
-    int* offset = (int*)calloc(M, sizeof(int));
+    double* sell_val = posix_aligned_alloc(total_nnz * sizeof(double), ALIGNMENT);
+    int* sell_idx = posix_aligned_alloc(total_nnz * sizeof(int), ALIGNMENT);
+    memset(sell_val, 0, total_nnz * sizeof(double));
+    for (size_t i = 0; i < total_nnz; ++i) sell_idx[i] = 0; // pad with 0 for vectorization
+
     int pos = 0;
     for (int s = 0; s < num_slices; ++s) {
         int slice_start = s * slice_size;
         int slice_end = (slice_start + slice_size > M) ? M : (slice_start + slice_size);
         int slice_len = slice_lengths[s];
         for (int r = slice_start; r < slice_end; ++r) {
-            int row_off = offset[r];
+            int row_nnz = row_counts[r];
             for (int j = 0; j < slice_len; ++j) {
                 int idx = pos++;
-                sell_idx[idx] = -1;
-                sell_val[idx] = 0.0;
-            }
-        }
-    }
-    pos = 0;
-    memset(offset, 0, M * sizeof(int));
-    for (int s = 0; s < num_slices; ++s) {
-        int slice_start = s * slice_size;
-        int slice_end = (slice_start + slice_size > M) ? M : (slice_start + slice_size);
-        int slice_len = slice_lengths[s];
-        for (int r = slice_start; r < slice_end; ++r) {
-            int row_off = offset[r];
-            for (int k = 0; k < nz; ++k) {
-                if (I[k] == r) {
-                    int idx = pos + row_off;
+                if (j < row_nnz) {
+                    int k = row_ptrs[r][j];
                     sell_val[idx] = val[k];
                     sell_idx[idx] = J[k];
-                    row_off++;
                 }
+                // else already padded with 0
             }
-            offset[r] = row_off;
-            pos += slice_len;
         }
     }
+
+    for (int i = 0; i < M; ++i) free(row_ptrs[i]);
+    free(row_ptrs);
     free(row_counts);
-    free(offset);
 
     SELLCSigma sellc;
     sellc.num_slices = num_slices;
@@ -169,11 +172,7 @@ void sellcsigma_spmv(const SELLCSigma* S, const int M, const double* x, double* 
             double sum = 0.0;
             int row_base = base + (r - slice_start) * slice_len;
             for (int j = 0; j < slice_len; ++j) {
-                int col = S->col_idx[row_base + j];
-                if (col >= 0) {
-                    double a_ij = S->val[row_base + j];
-                    sum += a_ij * x[col];
-                }
+                sum += S->val[row_base + j] * x[S->col_idx[row_base + j]];
             }
             y[r] = sum;
         }
@@ -249,7 +248,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    n_runs = 1;
+    n_runs = 100;
     start_time = get_time();
     for (int i = 0; i < n_runs; i++) {
         sellcsigma_spmv(&sellc, M, x, y_sellc);

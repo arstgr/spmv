@@ -82,7 +82,7 @@ void coo_to_ellpack(int M, int nz, int* I, int* J, double* val,
         exit(1);
     }
     memset(*ell_val, 0, arr_size * sizeof(double));
-    for (size_t i = 0; i < arr_size; ++i) (*ell_idx)[i] = -1;
+    for (size_t i = 0; i < arr_size; ++i) (*ell_idx)[i] = 0;
 
     int* offset = (int*)calloc(M, sizeof(int));
     for (int k = 0; k < nz; ++k) {
@@ -100,10 +100,7 @@ void ellpack_spmv(const int n_rows, const int max_nnz_per_row, const double* val
         double sum = 0.0;
         int base = i * max_nnz_per_row;
         for (int j = 0; j < max_nnz_per_row; ++j) {
-            int col = indices[base + j];
-            if (col >= 0) {
-                sum += val[base + j] * x[col];
-            }
+            sum += val[base + j] * x[indices[base + j]];
         }
         y[i] = sum;
     }
